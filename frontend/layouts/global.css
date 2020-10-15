@@ -1,0 +1,13 @@
+@font-face {
+  font-family: "Sintony";
+  src: local("Sintony"), url(~/assets/Sintony/Sintony-Regular.ttf) format("ttf");
+}
+@font-face {
+  font-family: "IBM Plex mono";
+  src: local("IBMPlexMono"), url(~/assets/IBMPlexMono/IBMPlexMono-Regular.ttf) format("ttf");
+}
+
+
+html {
+  font-family: "IBM Plex mono";
+}
