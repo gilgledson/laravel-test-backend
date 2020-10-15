@@ -33,7 +33,8 @@ class PropertyStoreRequest extends FormRequest
             'city_id'  => 'required',
             'state_id' => 'required',
             'status'   => 'required',
-            'email'    => 'required|email'
+            'email'    => 'required|email',
+            'neighborhood'    => 'required'
         ];
     }
     public function messages()
@@ -43,12 +44,13 @@ class PropertyStoreRequest extends FormRequest
             'street.required' => 'O campo rua é obrigatório',
             'city_id.required' => 'O campo cidade é obrigatório',
             'status.required' => 'O campo status é obrigatorio',
-            'email.email' => 'O E-mail informado não é válido'
+            'email.email' => 'O E-mail informado não é válido',
+            'neighborhood.required' => 'O campo bairro é obrigatório'
         ];
     }
     protected function failedValidation(Validator $validator)
     {
-        
+
         throw new HttpResponseException(
             response()->json(['error' =>  $validator->errors()->first()], JsonResponse::HTTP_UNPROCESSABLE_ENTITY)
         );
