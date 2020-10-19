@@ -7,14 +7,22 @@ use App\Models\Property;
 use App\Http\Requests\PropertyStoreRequest;
 use App\Models\State;
 use App\Models\City;
+use Illuminate\Http\Request;
 
 class PropertyController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $properties = Property::all();
+        $properties = Property::query();
+
+        if($request->city_id != "null" && $request->city_id){
+            $properties->where('city_id', $request->city_id);
+        }if($request->state_id != "null" && $request->state_id){
+            $properties->where('state_id', $request->state_id);
+        }
+
         return response()->json(
-            datatables()->of($properties)
+            datatables()->of($properties->get())
             ->addColumn('address_formated', function(Property $property){
                return $property->street.', '.$property->number.' - '.$property->neighborhood.', '.$property->city->name.' - '.$property->state->abbr;
             })

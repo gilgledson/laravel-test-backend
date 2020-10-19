@@ -37,11 +37,18 @@
                         <v-col cols="12" sm="6" md="6">
                             <v-text-field v-model="itemDefault.email" :rules="emailvalid" label="E-mail Contratante"></v-text-field>
                         </v-col>
+                        <v-col cols="12" sm="6" md="6">
+                            <v-text-field v-model="itemDefault.property_address" disabled label="Endereço Imóvel"></v-text-field>
+                        </v-col>
                     </v-row>
                     <v-row>
                         <v-col>
-                            <v-btn :disabled="!valid" color="primary" @click="nextFirst()">
-                                Próximo
+                            <v-btn color="primary" @click="save()">
+                                Salvar
+                            </v-btn>
+
+                            <v-btn :disabled="!valid" color="default" @click="nextFirst()">
+                                Editar imóvel
                             </v-btn>
                         </v-col>
                     </v-row>
@@ -68,7 +75,7 @@
                 </v-row>
                 <v-row>
                     <v-col>
-                        <v-data-table selectable-key="id" v-model="itemDefault.property_id" :single-select="true" item-key="id" show-select :headers="headers" :items="data" :options.sync="options" :server-items-length="total" :loading="loading" class="elevation-2">
+                        <v-data-table selectable-key="id" v-model="propertyId" :single-select="true" item-key="id" show-select :headers="headers" :items="data" :options.sync="options" :server-items-length="total" :loading="loading" class="elevation-2">
                             <template v-slot:top>
                                 <v-toolbar flat>
                                     <v-toolbar-title>Selecione o Imóvel</v-toolbar-title>
@@ -86,13 +93,12 @@
                 </v-row>
                 <v-row>
                     <v-col>
-                        <v-btn color="secundary" @click="back()">
-                            Voltar
+                        <v-btn color="default" @click="back()">
+                            Cancelar
                         </v-btn>
-                        <v-btn color="primary" @click="save()">
+                        <v-btn :disabled="!this.propertyId.length" color="primary" @click="save()">
                             Salvar
                         </v-btn>
-
                     </v-col>
                 </v-row>
             </v-stepper-content>
@@ -125,6 +131,7 @@ export default {
     mounted() {
         this.getStates()
         this.getApiData()
+        this.getContract()
     },
     methods: {
         makeToast(message, type) {
@@ -146,10 +153,13 @@ export default {
         nextFirst() {
             if (this.$refs.form.validate(true)) {
                 this.step++
+                this.editProperty = true
             }
         },
         back() {
             this.step--;
+            this.editProperty = false;
+            this.propertyId = [];
         },
         async getStates() {
             let response = await this.$axios.get('/v1/states/all');
@@ -162,6 +172,10 @@ export default {
             }
             this.getApiData();
         },
+        async getContract() {
+            let response = await this.$axios.get(`/v1/contract/${this.$route.params.id}`);
+            this.itemDefault = response.data.success;
+        },
         async getCities() {
             let response = await this.$axios.get(`/v1/cities/${this.filter.state_id}`);
             this.cities = response.data.success;
@@ -172,29 +186,23 @@ export default {
         },
         async save() {
             try {
-
-                if (this.itemDefault.property_id.length) {
-                    if (this.itemDefault.id) {
-                        let response = await this.$axios.patch('/v1/contract/' + dados.id, dados);
-                        this.makeToast('Regra atualizada com sucesso !', 'success')
-                        this.getApiData()
-                        this.close();
-                    } else {
-                        let response = await this.$axios.post('/v1/contract', {
-                            'name': this.itemDefault.name,
-                            'document_type': this.itemDefault.document_type,
-                            'document': this.itemDefault.document,
-                            'email': this.itemDefault.email,
-                            'property_id': this.itemDefault.property_id[0]['id']
-                        }, );
-                        this.makeToast('Regra cadastrado com sucesso !', 'success')
-                        this.getApiData()
-
-                        this.close();
-                    }
+                let property_id;
+                if (this.propertyId.length) {
+                    property_id = this.propertyId[0]['id']
                 } else {
-                    this.makeToast('Você deve selecionar um imóvel', 'danger');
+                    property_id = this.itemDefault.property_id;
                 }
+                let response = await this.$axios.patch('/v1/contract/' + this.itemDefault.id, {
+                    'id': this.itemDefault.id,
+                    'name': this.itemDefault.name,
+                    'document_type': this.itemDefault.document_type,
+                    'document': this.itemDefault.document,
+                    'email': this.itemDefault.email,
+                    'property_id': property_id
+                });
+                this.makeToast('Regra atualizada com sucesso !', 'success')
+                this.getApiData()
+                this.close();
             } catch (error) {
                 console.log(error)
                 this.makeToast(error, 'danger')
@@ -252,8 +260,10 @@ export default {
             snackbar: false,
             overlay: false,
             msg: '',
+            editProperty: false,
             snackbarColor: '#000',
             options: {},
+            propertyId: [],
             total: 0,
             loading: false,
             headers: [{

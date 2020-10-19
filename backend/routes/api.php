@@ -29,6 +29,7 @@ Route::prefix('v1')->group(function(){
             Route::get('cities/{id}'                               ,'PropertyController@getCities'                      )->name('user.me');
 
             Route::resource('property', 'PropertyController');
+            Route::resource('contract', 'ContractController');
         });
     });
 

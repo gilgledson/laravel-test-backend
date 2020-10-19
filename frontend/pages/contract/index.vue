@@ -9,7 +9,7 @@
                         <v-toolbar-title>Todas Cidades</v-toolbar-title>
                         <v-divider class="mx-4" inset vertical></v-divider>
                         <v-spacer></v-spacer>
-                        <v-btn color="primary" dark class="mb-2">Novo Contrato</v-btn>
+                        <v-btn color="primary" @click="goToNew()" dark class="mb-2">Novo Contrato</v-btn>
                     </v-toolbar>
                 </template>
                 <template v-slot:[`item.icone`]="{ item }">
@@ -50,11 +50,15 @@ export default {
     },
     mounted() {
         this.getApiData();
-        this.getStates();
     },
     watch: {
+        options: {
+            handler: function (value) {
+                this.getApiData();
+            },
+            deep: true
+        },
         dialog(value) {
-            console.log('value', value)
             if (!value) {
                 if (this.$refs.form)
                     this.$refs.form.reset()
@@ -73,44 +77,36 @@ export default {
         }
     },
     methods: {
-        closePermissions() {
-            this.editedItem = {
-                role_id: "",
-                titulo: '',
-                href: "",
-                icone: "",
-            };
+        goToNew() {
+            this.$router.push('/contract/new');
         },
+
         async getCities() {
             let response = await this.$axios.get(`/v1/cities/${this.editedItem.state_id.id}`);
             this.cities = response.data.success;
         },
-        addBairro(item) {
-            this.$router.push({
-                path: 'localizacoes/' + item.id
-            })
-        },
-        close() {
-            this.dialog = false;
-            setTimeout(() => {
-                this.editedItem = Object.assign({}, this.defaultItem);
-                this.editedIndex = -1;
-            }, 300);
-        },
-
-        editItem(item) {
-            this.editedIndex = this.data.indexOf(item);
-            this.editedItem = Object.assign({}, item);
-            this.dialog = true;
-        },
         async deleteItem(item) {
             try {
-                let response = await this.$axios.delete('/v1/property/' + item.id)
+                let response = await this.$axios.delete('/v1/contract/' + item.id)
                 this.makeToast('Item deletado com sucesso !', 'success')
                 this.getApiData()
             } catch (error) {
                 this.makeToast('Erro ao tentar deletar registro', 'danger')
                 this.getApiData()
+            }
+        },
+        makeToast(message, type) {
+            if (type == 'success') {
+                this.snackbarColor = "#00b33c"
+            } else if (type == 'danger') {
+                this.snackbarColor = "#ff3333"
+            }
+            this.msg = message;
+            if (this.snackbar) {
+                this.snackbar = false;
+                setTimeout(() => this.snackbar = true, 500)
+            } else {
+                this.snackbar = true;
             }
         },
         ConfirmdeleteItem(item) {
@@ -132,6 +128,16 @@ export default {
             });
 
         },
+        close() {
+            this.dialog = false;
+            setTimeout(() => {
+                this.editedItem = Object.assign({}, this.defaultItem);
+                this.editedIndex = -1;
+            }, 300);
+        },
+        editItem(item) {
+            this.$router.push(`/contract/${item.id}`)
+        },
         async getApiData() {
             this.loading = true;
             const {
@@ -140,13 +146,11 @@ export default {
                 page,
                 itemsPerPage
             } = this.options
-
-            let start = (page - 1) * itemsPerPage;
             if (this.search) {
-                this.$axios.get(`${this.getData}?start=${start}&query=${this.search}&page=${page}&length=${itemsPerPage}`)
+                this.$axios.get(`${this.getData}?query=${this.search}&page=${page}&length=${itemsPerPage}`)
                     .then(res => {
                         this.data = res.data.original.data;
-                        this.total = res.data.original.recordsTotal;
+                        this.total = res.data.recordsTotal;
                     })
                     .catch(err => console.log(err.response.data))
                     .finally(() => this.loading = false);
@@ -154,15 +158,15 @@ export default {
             // get by sort option
             if (sortBy && !this.search) {
                 const direction = descending ? 'desc' : 'asc';
-                this.$axios.get(`${this.getData}?start=${start}&direction=${direction}&sortBy=${sortBy}&page=${page}&length=${itemsPerPage}`)
+                this.$axios.get(`${this.getData}?direction=${direction}&sortBy=${sortBy}&draw=0&page=${page}&length=${itemsPerPage}`)
                     .then(res => {
                         this.loading = false;
                         this.data = res.data.original.data;
-                        this.total = res.data.original.recordsTotal;
+                        this.total = res.data.recordsTotal;
                     });
             }
             if (!this.search && !sortBy) {
-                this.$axios.get(`${this.getData}?start=${start}&page=${page}&length=${itemsPerPage}`)
+                this.$axios.get(`${this.getData}?page=${page}&draw=0&length=${itemsPerPage}&draw=0`)
                     .then(res => {
                         this.data = res.data.original.data;
                         this.total = res.data.original.recordsTotal;
@@ -170,85 +174,6 @@ export default {
                     .catch(err => console.log(err.response.data))
                     .finally(() => this.loading = false);
             }
-        },
-        async getStates() {
-            let response = await this.$axios.get('/v1/states/all');
-            console.log('----- PERMISSÕES ------')
-            console.log(response.data)
-            this.estados = response.data.success;
-            console.log('----- PERMISSÕES ------')
-        },
-        async setAbillityToRole(event, item) {
-            try {
-                let verifica = event.filter(e => e == item.id).length;
-                if (verifica) {
-                    let response = await this.$axios.post('/v1/admin/roles/allowAbility', {
-                        "roleName": this.editedItem.name,
-                        "AbilityName": item.name
-                    });
-                    this.makeToast(response.data.success, 'success')
-                } else {
-                    let response = await this.$axios.put('/v1/admin/roles/abilities/deny', {
-                        "roleName": this.editedItem.name,
-                        "AbilityName": item.name
-                    });
-                    this.makeToast(response.data.success, 'success')
-                }
-            } catch (error) {
-                this.makeToast(error.response.data.error, 'danger')
-            }
-
-        },
-
-        async save() {
-            try {
-                if (this.$refs.form.validate(true)) {
-                    let data = this.editedItem;
-                    if (typeof data.estado_id == "object") {
-                        data.estado_id = data.estado_id.id
-                    }
-                    if (this.editedItem.id) {
-                        let response = await this.$axios.patch('/v1/admin/cidades/' + this.editedItem.id, this.editedItem);
-                        this.makeToast('Regra atualizada com sucesso !', 'success')
-                        this.getApiData()
-                        this.close();
-                    } else {
-                        let response = await this.$axios.post('/v1/admin/cidades', this.editedItem);
-                        this.makeToast('Regra cadastrado com sucesso !', 'success')
-                        this.getApiData()
-
-                        this.close();
-                    }
-                }
-            } catch (error) {
-                if (error.response) {
-                    for (const [key, value] of Object.entries(error.response.data.error)) {
-                        console.log(error.response.data.error[key]);
-                        this.makeToast(error.response.data.error[key][0], 'danger')
-                    }
-                } else {
-                    console.log(error.message);
-                    this.makeToast(error.message, 'danger')
-                }
-                console.log(error);
-            }
-
-        },
-        makeToast(message, type) {
-
-            if (type == 'success') {
-                this.snackbarColor = "#00b33c"
-            } else if (type == 'danger') {
-                this.snackbarColor = "#ff3333"
-            }
-            this.msg = message;
-            if (this.snackbar) {
-                this.snackbar = false;
-                setTimeout(() => this.snackbar = true, 500)
-            } else {
-                this.snackbar = true;
-            }
-
         }
     },
     data: () => ({
@@ -270,7 +195,7 @@ export default {
         estados: [],
         permissionsForUser: [],
         dialogPermission: false,
-        getData: '/v1/property',
+        getData: '/v1/contract',
         editedItem: {
             email: "",
             state_id: '',
@@ -304,16 +229,17 @@ export default {
                 value: 'id'
             },
             {
+                text: 'Contratante',
+                value: 'name'
+            },
+
+            {
                 text: 'E-mail',
                 value: 'email'
             },
             {
-                text: 'Endereço',
+                text: 'Imóvel',
                 value: 'address_formated'
-            },
-            {
-                text: 'Status',
-                value: 'statusFormatted'
             },
             {
                 text: 'Ação',
@@ -324,7 +250,7 @@ export default {
         ],
         rowsPerPageItems: [5, 10, 20, 50, 100],
         page: {
-            title: "Imóveis"
+            title: "Contratos"
         },
         breadcrumbs: [{
                 text: "Dashboard",
@@ -332,7 +258,7 @@ export default {
                 to: "/dashboard"
             },
             {
-                text: "Imóveis",
+                text: "Contratos",
                 disabled: true
             }
         ]

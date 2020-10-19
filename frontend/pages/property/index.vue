@@ -109,6 +109,12 @@ export default {
         this.getStates();
     },
     watch: {
+        options: {
+            handler: function (value) {
+                this.getApiData();
+            },
+            deep: true
+        },
         dialog(value) {
             if (!value) {
                 if (this.$refs.form) {
@@ -186,13 +192,11 @@ export default {
                 page,
                 itemsPerPage
             } = this.options
-
-            let start = (page - 1) * itemsPerPage;
             if (this.search) {
-                this.$axios.get(`${this.getData}?start=${start}&query=${this.search}&page=${page}&length=${itemsPerPage}`)
+                this.$axios.get(`${this.getData}?query=${this.search}&page=${page}&length=${itemsPerPage}`)
                     .then(res => {
                         this.data = res.data.original.data;
-                        this.total = res.data.original.recordsTotal;
+                        this.total = res.data.recordsTotal;
                     })
                     .catch(err => console.log(err.response.data))
                     .finally(() => this.loading = false);
@@ -200,15 +204,15 @@ export default {
             // get by sort option
             if (sortBy && !this.search) {
                 const direction = descending ? 'desc' : 'asc';
-                this.$axios.get(`${this.getData}?start=${start}&direction=${direction}&sortBy=${sortBy}&page=${page}&length=${itemsPerPage}`)
+                this.$axios.get(`${this.getData}?direction=${direction}&sortBy=${sortBy}&draw=0&page=${page}&length=${itemsPerPage}`)
                     .then(res => {
                         this.loading = false;
                         this.data = res.data.original.data;
-                        this.total = res.data.original.recordsTotal;
+                        this.total = res.data.recordsTotal;
                     });
             }
             if (!this.search && !sortBy) {
-                this.$axios.get(`${this.getData}?start=${start}&page=${page}&length=${itemsPerPage}`)
+                this.$axios.get(`${this.getData}?page=${page}&draw=0&length=${itemsPerPage}&draw=0`)
                     .then(res => {
                         this.data = res.data.original.data;
                         this.total = res.data.original.recordsTotal;
@@ -216,6 +220,7 @@ export default {
                     .catch(err => console.log(err.response.data))
                     .finally(() => this.loading = false);
             }
+
         },
         async getStates() {
             let response = await this.$axios.get('/v1/states/all');
