@@ -95,14 +95,14 @@ class PropertyController extends Controller
     }
     public function store(PropertyStoreRequest $request)
     {
-        if(isset($request->validator)){
-            return response()->json(['error' => $request->validator], 409);
-        }
-        try {
 
+        try {
+            if(isset($request->validator)){
+                return response()->json(['error' => $request->validator], 409);
+            }
            $property = Property::create($request->all());
            if($property){
-                return response()->json(['success' => $request->validator], 201);
+                return response()->json(['success' => $property], 201);
            }else{
                 return response()->json(['error' => 'Erro ao tentar cadastrar imóvel'], 409);
            }
